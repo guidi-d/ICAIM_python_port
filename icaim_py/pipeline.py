@@ -12,21 +12,22 @@ from .common import (
     build_summary,
     build_ica_init_parameters,
     build_pca,
-    center_data,
     compute_quality_metrics,
     default_case1_output_dir,
     flat_quality_metrics,
     json_ready,
-    load_case_dataset,
     reorder_decomp,
     save_json,
     save_results_mat,
     save_results_npz,
-    station_names_from_series,
     validate_and_describe_config,
 )
+
 from .vbica import decompose_ica
 
+
+from .common import center_data
+from .insar import load_case_dataset, station_names_from_series
 
 def run_decomposition(
     repo_root: str | Path,
@@ -53,8 +54,11 @@ def run_decomposition(
     output_path.mkdir(parents=True, exist_ok=True)
 
     xd_stations, xd_precen = load_case_dataset(cfg)
+
     xd, pca_4cen = center_data(xd_precen, cfg)
+
     pca = build_pca(xd, cfg, pca_4cen=pca_4cen)
+    
     init_parameters = build_ica_init_parameters(cfg, pca)
     ica, ica_aux = decompose_ica(xd, pca, init_parameters)
 

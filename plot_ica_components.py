@@ -3,9 +3,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from icaim_py.common import find_repo_root, resolve_case1_results_file
-from icaim_py.plots import create_ica_component_plots
+from icaim_py.common import find_repo_root, load_results_file, resolve_case1_results_file
 
+from icaim_py.plots import create_ica_component_plots as create_ica_component_plots_gps
+from icaim_py.insar import create_ica_component_plots_insar
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -83,9 +84,16 @@ def main() -> None:
     repo_root = args.repo_root.resolve()
     results_file = resolve_case1_results_file(args.results_file, repo_root)
     output_dir = args.output_dir.resolve() if args.output_dir is not None else results_file.parent / "plots"
+    results = load_results_file(results_file)
+    dataset_types = {str(value).upper() for value in results["Xd"]["type"]}
+    create_ica_component_plots = (
+        create_ica_component_plots_insar
+        if any(value.startswith("INSARLOS") for value in dataset_types)
+        else create_ica_component_plots_gps
+    )
 
     generated = create_ica_component_plots(
-        results_or_file=results_file,
+        results_or_file=results,
         output_dir=output_dir,
         repo_root=repo_root,
         components=args.components,

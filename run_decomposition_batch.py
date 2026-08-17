@@ -23,6 +23,11 @@ from icaim_py.common import (
 )
 from icaim_py.pipeline import run_decomposition
 
+from icaim_py.plots import create_ica_component_plots as create_ica_component_plots_gps
+from icaim_py.insar import create_ica_component_plots_insar
+
+from icaim_py.station_plots import create_station_fit_plots
+
 
 def load_batch_spec(path: Path) -> dict[str, Any]:
     try:
@@ -439,9 +444,14 @@ def main() -> None:
             )
 
             if args.make_plots:
-                from icaim_py.plots import create_ica_component_plots
 
                 plot_output_dir = per_run_aux_output_dir(args.plot_output_dir, run_output_dir, run_name, "plots")
+                dataset_types = {str(value).upper() for value in results["Xd"]["type"]}
+                create_ica_component_plots = (
+                    create_ica_component_plots_insar
+                    if any(value.startswith("INSARLOS") for value in dataset_types)
+                    else create_ica_component_plots_gps
+                )
                 plot_paths = create_ica_component_plots(
                     results_or_file=results,
                     output_dir=plot_output_dir,
@@ -458,7 +468,6 @@ def main() -> None:
                 record["plot_file_count"] = len(plot_paths)
 
             if args.make_station_fit_plots:
-                from icaim_py.station_plots import create_station_fit_plots
 
                 station_fit_output_dir = per_run_aux_output_dir(
                     args.station_fit_output_dir,
