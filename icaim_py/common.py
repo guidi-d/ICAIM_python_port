@@ -72,6 +72,11 @@ class FlagsConfig:
 
 
 @dataclass(frozen=True)
+class OutputConfig:
+    descriptive_label: int = 0
+
+
+@dataclass(frozen=True)
 class VelocityConfig:
     file: Path = Path("Data/California/SoCal/NGL/NA12/vel/MIDAS/vel_MIDASformat_NA12_2018-01-22.txt")
     format: str = "MIDAS"
@@ -184,6 +189,7 @@ class Config:
     decompositionPCA: PCADecompositionConfig = field(default_factory=PCADecompositionConfig)
     decompositionICA: ICADecompositionConfig = field(default_factory=ICADecompositionConfig)
     flags: FlagsConfig = field(default_factory=FlagsConfig)
+    output: OutputConfig = field(default_factory=OutputConfig)
     outliers: OutliersConfig = field(default_factory=OutliersConfig)
 
 
@@ -450,9 +456,46 @@ def infer_case1_dataset_label(data_input_file: str | Path, repo_root: str | Path
     return _fallback_dataset_label(resolved_data_input)
 
 
-def default_case1_output_dir(cfg: Config) -> Path:
+def infer_case1_dataset_type_label(data_input_file: str | Path, repo_root: str | Path) -> str | None:
+    repo_root = Path(repo_root).resolve()
+    resolved_data_input = resolve_case1_data_input_file(data_input_file, repo_root)
+
+    dataset_types: list[str] = []
+    try:
+        datasets = [entry for entry in parse_data_input(resolved_data_input, repo_root) if entry["instruction"] == "decomp"]
+        for dataset in datasets:
+            dataset_type = str(dataset["type"]).strip().upper()
+            if dataset_type and dataset_type not in dataset_types:
+                dataset_types.append(dataset_type)
+    except Exception:
+        dataset_types = []
+
+    if not dataset_types:
+        return None
+    return "__".join(dataset_types)
+
+
+def default_case1_output_label(cfg: Config) -> str:
     dataset_label = infer_case1_dataset_label(cfg.data_input_file, cfg.repo_root)
-    return case1_python_port_output_root(cfg.repo_root) / dataset_label
+    dataset_type_label = infer_case1_dataset_type_label(cfg.data_input_file, cfg.repo_root)
+    if dataset_type_label:
+        dataset_label = f"{dataset_label}_{dataset_type_label}"
+    mode = normalize_decomposition_mode(cfg.decomposition_mode)
+    label_parts = [dataset_label, f"{mode}mode"]
+    if cfg.output.descriptive_label:
+        label_parts.extend(
+            [
+                f"nc{cfg.n_components}",
+                f"center-{str(cfg.centering.type).lower()}",
+            ]
+        )
+        if cfg.flags.flag_whitening:
+            label_parts.append("whitened")
+    return "_".join(label_parts)
+
+
+def default_case1_output_dir(cfg: Config) -> Path:
+    return case1_python_port_output_root(cfg.repo_root) / default_case1_output_label(cfg)
 
 
 def default_case1_batch_output_dir(repo_root: str | Path, batch_file: str | Path) -> Path:
