@@ -1,0 +1,44 @@
+{
+  "data_input_file": "DATA_INPUT_FILE",
+  "first_epoch": mTIME,
+  "last_epoch": MTIME,
+  "n_components": NCOMP,
+  "unit_output": "mm",
+  "skip_epochs": [],
+  "threshold_ts_missingdata": 80.0,
+  "threshold_epochs_missingdata": 100.0,
+  "decompositionICA": {
+    "source_type": "g",
+    "learning_percent": 100,
+    "ICA_num": 1,
+    "n_mixed_pdfs": 4,
+    "states": null,
+    "mix_prior_preset": null,
+    "source_prior_preset": null,
+    "net_init": "SVD",
+    "source_init": "kmeans",
+    "max_steps": 500,
+    "isonoise": 1,
+    "ARD": 1,
+    "tol": 1e-08,
+    "eta": 1.0,
+    "mix": {
+      "b_alpha_0": 1000.0,
+      "c_alpha_0": 0.001
+    },
+    "noise": {
+      "b_Lam_0": 10.0,
+      "c_Lam_0": 0.1,
+      "mb0": 1.0,
+      "mn0": 0.0
+    },
+    "source": {
+      "m_0": 0.0,
+      "tau_0": 1.0,
+      "b_0": 10.0,
+      "c_0": 0.1,
+      "lambda_0": null,
+      "setSource": 1
+    }
+  }
+}
