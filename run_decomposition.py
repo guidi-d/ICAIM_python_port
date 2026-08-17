@@ -70,6 +70,11 @@ def main() -> None:
         help="Also generate ICA or PCA component PDF/PNG figures after the run.",
     )
     parser.add_argument(
+        "--make-centers-plots",
+        action="store_true",
+        help="Also generate center PDF/PNG figures after the run if centering == tsmode.",
+    )
+    parser.add_argument(
         "--plot-output-dir",
         default=None,
         type=Path,
@@ -193,6 +198,23 @@ def main() -> None:
     for note in results.get("config_notes", []):
         print(f"config_note={note}")
     
+    if args.make_centers_plots and cfg.centering.type == "tsmode":
+        plot_output_dir = args.plot_output_dir.resolve() if args.plot_output_dir is not None else output_dir / "plots"
+        
+        from icaim_py.centering_tsmode import create_centers_stmode_plots
+        generated = create_centers_stmode_plots(
+            results,
+            cfg=cfg,
+            output_dir=plot_output_dir,
+            dpi=args.dpi,
+            repo_root=repo_root,
+            background_grid=args.background_grid,
+            label_stations=args.label_stations,
+            station_indices=None,
+        )
+        for path in generated:
+            print(path)
+
 
     if args.make_plots:
         plot_output_dir = args.plot_output_dir.resolve() if args.plot_output_dir is not None else output_dir / "plots"

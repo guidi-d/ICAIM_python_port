@@ -26,7 +26,7 @@ from .common import (
 from .vbica import decompose_ica
 
 
-from .common import center_data
+from .centering_tsmode import center_data
 from .insar import load_case_dataset, station_names_from_series
 
 def run_decomposition(

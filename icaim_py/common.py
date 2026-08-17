@@ -673,7 +673,7 @@ def _resolve_ica_mix_prior_preset(cfg: ICADecompositionConfig) -> ICAMixConfig:
 def validate_and_describe_config(cfg: Config) -> list[str]:
     notes: list[str] = []
 
-    supported_centering_types = {"basic", "advanced"}
+    supported_centering_types = {"basic", "advanced", "tsmode"}
     supported_centering_functions = set(LEGACY_CENTERING_FUNCTION_ALIASES)
     supported_vimposed_types = {"None", "Heaviside", "Linear", "V"}
     supported_pca_functions = set(LEGACY_PCA_DECOMP_ALIASES)
