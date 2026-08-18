@@ -48,7 +48,7 @@ SUPPORTED_DATASET_COMPONENTS: dict[str, tuple[str, ...]] = {
     "INSARLOS": ("los",),
 }
 
-POINTSIZE = 50
+POINTSIZE = 1
 VARIANCES = 1
 
 def dataset_components_for_type(value: Any) -> tuple[str, ...]:
@@ -159,7 +159,7 @@ def read_insar_matrix(input_file,indexcol =None,sep =',',x_col ='lon', y_col ='l
                         break
                 time_cols = [col for col in headers if col.startswith(time_prefix)]
                 times_index = [headers.index(ct) for ct in time_cols]
-                
+
                 timeline = np.asarray([parse_time_column(col, time_prefix=time_prefix, time_format=time_format) for col in time_cols],dtype=float)
             else:
                 series=[]
@@ -177,7 +177,7 @@ def read_insar_matrix(input_file,indexcol =None,sep =',',x_col ='lon', y_col ='l
                     "var_los": var_values,
                 }
 
-                
+
                 station = {
                     "name": str(row[name_index]),
                     "file": str(input_file),
@@ -188,7 +188,7 @@ def read_insar_matrix(input_file,indexcol =None,sep =',',x_col ='lon', y_col ='l
                     "timeline": timeline,
                     "pos": pos,
                 }
-            
+
                 stations.append(station)
     return(stations)
 

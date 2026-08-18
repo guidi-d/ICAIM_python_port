@@ -54,13 +54,17 @@ def run_decomposition(
     output_path.mkdir(parents=True, exist_ok=True)
 
     xd_stations, xd_precen = load_case_dataset(cfg)
+    print('Data loaded')
 
     xd, pca_4cen = center_data(xd_precen, cfg)
+    print('Data centered')
 
     pca = build_pca(xd, cfg, pca_4cen=pca_4cen)
-    
+    print('PCA done')
+
     init_parameters = build_ica_init_parameters(cfg, pca)
     ica, ica_aux = decompose_ica(xd, pca, init_parameters)
+    print('ICA done')
 
     station_names = station_names_from_series(pca["name"], pca["type"])
     results = {

@@ -482,13 +482,10 @@ def default_case1_output_label(cfg: Config) -> str:
         dataset_label = f"{dataset_label}_{dataset_type_label}"
     mode = normalize_decomposition_mode(cfg.decomposition_mode)
     label_parts = [dataset_label, f"{mode}mode"]
+    centering_label = f"center-{str(cfg.centering.type).lower()}"
+    label_parts.append(centering_label)
+    label_parts.append(f"nc{cfg.n_components}")
     if cfg.output.descriptive_label:
-        label_parts.extend(
-            [
-                f"nc{cfg.n_components}",
-                f"center-{str(cfg.centering.type).lower()}",
-            ]
-        )
         if cfg.flags.flag_whitening:
             label_parts.append("whitened")
     return "_".join(label_parts)
