@@ -198,27 +198,43 @@ def main() -> None:
     for note in results.get("config_notes", []):
         print(f"config_note={note}")
     
+    dataset_types = {str(value).upper() for value in results["Xd"]["type"]}
+
     if args.make_centers_plots and cfg.centering.type == "tsmode":
         plot_output_dir = args.plot_output_dir.resolve() if args.plot_output_dir is not None else output_dir / "plots"
-        
-        from icaim_py.centering_tsmode import create_centers_stmode_plots
-        generated = create_centers_stmode_plots(
-            results,
-            cfg=cfg,
-            output_dir=plot_output_dir,
-            dpi=args.dpi,
-            repo_root=repo_root,
-            background_grid=args.background_grid,
-            label_stations=args.label_stations,
-            station_indices=None,
-        )
+
+        if any(value.startswith("INSARLOS") for value in dataset_types):
+            from icaim_py.centering_tsmode import create_insar_center_plots
+            generated = create_insar_center_plots(
+                results,
+                cfg=cfg,
+                output_dir=plot_output_dir,
+                dpi=args.dpi,
+                repo_root=repo_root,
+                background_grid=args.background_grid,
+                label_points=args.label_stations,
+            )
+        else:
+            from icaim_py.centering_tsmode import create_centers_stmode_plots
+            generated = create_centers_stmode_plots(
+                results,
+                cfg=cfg,
+                output_dir=plot_output_dir,
+                dpi=args.dpi,
+                repo_root=repo_root,
+                background_grid=args.background_grid,
+                label_stations=args.label_stations,
+                station_indices=None,
+            )
+
         for path in generated:
             print(path)
 
 
     if args.make_plots:
+        print('Plotting components')
+
         plot_output_dir = args.plot_output_dir.resolve() if args.plot_output_dir is not None else output_dir / "plots"
-        dataset_types = {str(value).upper() for value in results["Xd"]["type"]}
         create_ica_component_plots = (
             create_ica_component_plots_insar
             if any(value.startswith("INSARLOS") for value in dataset_types)
@@ -239,7 +255,8 @@ def main() -> None:
         for path in generated:
             print(path)
     
-    if args.make_station_fit_plots:
+    if args.make_station_fit_plots and ( not any(value.startswith("INSARLOS") for value in dataset_types)):
+        print('Plotting station fits')
 
         station_fit_output_dir = (
             args.station_fit_output_dir.resolve() if args.station_fit_output_dir is not None else output_dir / "station_fits"
