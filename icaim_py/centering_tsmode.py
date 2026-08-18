@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import math
 from matplotlib import pyplot as plt
 
 from .common import Config, default_case1_output_dir
@@ -540,32 +541,6 @@ def create_centers_stmode_plots(
     return generated
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def centering_offsets_matrix(
     offsets: Any,
     data_shape: tuple[int, int],
@@ -677,3 +652,167 @@ def station_fit_raw_series_from_centering(
             centering_type=centering_type,
         ),
     }
+
+
+
+
+
+def plot_insar_tmode_centers_map(
+    xd: dict[str, Any],
+    xd_precen: dict[str, Any],
+    background=None,
+    label_points: bool = False,
+) -> plt.Figure:
+    from .insar import infer_dataset_layout, POINTSIZE
+    from .plots import _plot_extent
+
+    dataset_type, components = infer_dataset_layout(xd["type"], xd["ts"].shape[0])
+    if dataset_type != "INSARLOS":
+        raise ValueError(f"Expected INSARLOS dataset, got {dataset_type}")
+
+    offsets = np.asarray(xd["centering_offsets"], dtype=float)
+
+    if offsets.ndim == 2:
+        # t-mode: ogni riga ha offset costante nel tempo
+        center_values = np.nanmedian(offsets, axis=1)
+    elif offsets.ndim == 1:
+        center_values = offsets
+    else:
+        raise ValueError("Xd.centering_offsets must be 1-D or 2-D.")
+
+    lon = np.asarray(xd_precen["llh"][:, 0], dtype=float)
+    lat = np.asarray(xd_precen["llh"][:, 1], dtype=float)
+    names = [str(name) for name in xd_precen["name"]]
+
+    color_limit = float(np.nanmax(np.abs(center_values)))
+    if not np.isfinite(color_limit) or color_limit == 0.0:
+        color_limit = 1.0
+
+    extent = _plot_extent(lon, lat, background)
+    lon_min, lon_max, lat_min, lat_max = extent
+    mean_lat = float(np.nanmean(lat))
+
+    figure, ax = plt.subplots(figsize=(8.27, 8.27), constrained_layout=True)
+    ax.set_facecolor("#ececec")
+
+    _draw_background(ax, background)
+
+    scatter = ax.scatter(
+        lon,
+        lat,
+        c=center_values,
+        cmap="seismic",
+        s=POINTSIZE,
+        edgecolors="none",
+        linewidths=0.0,
+        alpha=0.95,
+        zorder=3,
+        vmin=-color_limit,
+        vmax=color_limit,
+    )
+
+    if label_points:
+        for lon_value, lat_value, name in zip(lon, lat, names):
+            ax.text(lon_value, lat_value, f" {name}", fontsize=5.5, ha="left", va="center", zorder=6)
+
+    ax.set_xlim(lon_min, lon_max)
+    ax.set_ylim(lat_min, lat_max)
+    ax.set_xlabel("Longitude")
+    ax.set_ylabel("Latitude")
+    ax.grid(color="0.8", linewidth=0.6, linestyle=":")
+    ax.set_aspect(1.0 / math.cos(math.radians(mean_lat)))
+    ax.set_title("InSAR LOS centering offsets", loc="left", fontsize=12, pad=8)
+
+    colorbar = figure.colorbar(scatter, ax=ax, orientation="horizontal", fraction=0.055, pad=0.08)
+    colorbar.set_label("LOS centering offset (mm)")
+
+    return figure
+
+
+
+def plot_insar_smode_centers_series(
+    xd: dict[str, Any],
+) -> plt.Figure:
+    from .insar import infer_dataset_layout
+
+    dataset_type, components = infer_dataset_layout(xd["type"], xd["ts"].shape[0])
+    if dataset_type != "INSARLOS":
+        raise ValueError(f"Expected INSARLOS dataset, got {dataset_type}")
+
+    timeline = np.asarray(xd["timeline"], dtype=float).reshape(-1)
+    offsets = np.asarray(xd["centering_offsets"], dtype=float)
+
+    if offsets.ndim == 2:
+        # s-mode: ogni colonna ha lo stesso offset per tutti i punti
+        center_series = np.nanmedian(offsets, axis=0)
+    elif offsets.ndim == 1:
+        center_series = offsets
+    else:
+        raise ValueError("Xd.centering_offsets must be 1-D or 2-D.")
+
+    if center_series.size != timeline.size:
+        raise ValueError(
+            f"Center series length {center_series.size} does not match timeline length {timeline.size}."
+        )
+
+    figure, ax = plt.subplots(figsize=(10.5, 3.8), constrained_layout=True)
+
+    ax.plot(timeline, center_series, color="black", linewidth=1.2)
+    ax.scatter(timeline, center_series, color="black", s=12, zorder=3)
+    ax.axhline(0.0, color="0.6", linewidth=0.8, linestyle="--")
+    ax.set_xlim(float(np.nanmin(timeline)), float(np.nanmax(timeline)))
+    ax.set_xlabel("Time (yr)")
+    ax.set_ylabel("LOS centering offset (mm)")
+    ax.set_title("InSAR S-mode temporal centering offsets", loc="left", fontsize=12, pad=8)
+    ax.grid(color="0.85", linewidth=0.6, linestyle=":")
+
+    return figure
+
+
+def create_insar_center_plots(
+    results_or_file: dict[str, Any] | str | Path,
+    cfg: Config,
+    output_dir: str | Path,
+    repo_root: str | Path | None = None,
+    background_grid: str | Path | None = "auto",
+    label_points: bool = False,
+    dpi: int = 200,
+) -> list[Path]:
+    from .common import normalize_decomposition_mode
+
+    results, _ = _load_results(results_or_file)
+
+    output_path = Path(output_dir).resolve()
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    mode = normalize_decomposition_mode(cfg.decomposition_mode)
+    generated: list[Path] = []
+
+    if mode == "t":
+        lon = results["Xd_precen"]["llh"][:, 0]
+        lat = results["Xd_precen"]["llh"][:, 1]
+        background_extent = _padded_station_extent(lon, lat)
+        background = _load_background(_infer_repo_root(results, repo_root), background_grid, background_extent)
+
+        fig = plot_insar_tmode_centers_map(
+            results["Xd"],
+            results["Xd_precen"],
+            background=background,
+            label_points=label_points,
+        )
+        stem = "centers_insar_tmode_map"
+
+    elif mode == "s":
+        fig = plot_insar_smode_centers_series(results["Xd"])
+        stem = "centers_insar_smode_series"
+
+    else:
+        raise ValueError(f"Unsupported decomposition_mode={cfg.decomposition_mode!r}")
+
+    pdf = output_path / f"{stem}.pdf"
+    png = output_path / f"{stem}.png"
+    fig.savefig(pdf)
+    fig.savefig(png, dpi=dpi)
+    plt.close(fig)
+
+    return [pdf, png]
